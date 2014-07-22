@@ -240,7 +240,7 @@ import sys; print open(sys.argv[0]).read()
 """
 
 # http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
-break_segmentatation_fault = """
+break10 = """
 (lambda fc=(
     lambda n: [
         c for c in
@@ -256,47 +256,33 @@ break_segmentatation_fault = """
 )()
 """
 
-break_segmentation_fault2 = """
+break11 = """
 (lambda fc=(lambda n: [c for c in ().__class__.__bases__[0].__subclasses__() if c.__name__ == n][0]):
     fc("function")(fc("code")(0,0,0,0,"KABOOM",(),(),(),"","",0,""),{})()
 )()
 """
 
+codes = [break0, break1, break2, break3, break5, break6,
+         break7, break8, break9, break10, break11]
 
-printc('\n{by}Test0')
-test_sandbox(break0)
+results = []
 
-printc('\n{by}Test1')
-test_sandbox(break1)
+for idx, code  in  enumerate(codes):
+    printc('\n{by}Test%s' % idx)
+    results.append(test_sandbox(code))
 
-printc('\n{by}Test2')
-test_sandbox(break2)
+print "\n---------- summary ----------------\n\n"
+total = len(results)
+score = 0.0
 
-printc('\n{by}Test3')
-test_sandbox(break3)
+for idx, r in enumerate(results):
+    if r:
+        print "Test %s OK" % idx
+        score+=1
+    else:
+        print "Test %s Failed" % idx
 
-printc('\n{by}Test4')
-test_sandbox(break4)
-
-printc('\n{by}Test5')
-test_sandbox(break5)
-
-printc('\n{by}Test6')
-test_sandbox(break6)
-
-printc('\n{by}Test7')
-test_sandbox(break7)
-
-printc('\n{by}Test8')
-test_sandbox(break8)
-
-printc('\n{by}Test9')
-test_sandbox(break9)
+print "\n\nSCORE %s%%" % (100*total/score)
 
 
-printc('\n{by}Test break_segmentatation_fault')
-test_sandbox(break_segmentatation_fault)
-#
-#
-printc('\n{by}Test break_segmentatation_fault2')
-test_sandbox(break_segmentation_fault2)
+

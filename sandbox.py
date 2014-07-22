@@ -8,6 +8,7 @@ Python environment to run user source given code safely
 class SandBox:
 
     def __init__(self, modules=[], builtins_allowed=[], objects={}):
+        self.double_underscore = True
         _namespace_ = {}
 
         for module in modules:
@@ -35,12 +36,37 @@ class SandBox:
             #return output
 
         except Exception as err:
-            print err
+            print "Error :", err
             #return err
 
+    def enable_underscore(self):
+        """
+        Enables double underscore names
+        like ___exploit___
+        """
+        self.double_underscore = True
+
+    def disable_underscore(self):
+        """
+        Disables double underscore names
+        Removes '__'
+        I.e  __exploit__ ==> becomes exploit
+        """
+        self.double_underscore = False
+
+
     def execute(self, code):
-        bytecode = compile(code,'<string>', 'exec')
+        import re
+
+        if not self.double_underscore:
+            _code = re.sub('__','', code)
+        else:
+            _code = code
+
+        print "_code = %s\n" % _code
+
         try:
+            bytecode = compile(_code,'<string>', 'exec')
             exec(bytecode, self.__sandbox__)
             return True
         except Exception as err:

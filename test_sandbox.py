@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#
+#
+#   http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
+#
+#
+#
 
 import os
 import sys
@@ -9,9 +15,11 @@ from sandbox import SandBox
 modules=["random", "math", "numpy"]
 #builtins_allowed = ["range", "xrange"]
 objects = {'listdir': os.listdir, 'platform': sys.platform, 'pprint':pprint.pprint, 'dict': dict,
-           'chr':chr}
+           'chr':chr, 'ord':ord, 'dir':dir}
 #s = SandBox(modules=modules, builtins_allowed=builtins_allowed, objects=objects)
+
 s = SandBox(modules=modules, builtins_allowed=[], objects=objects)
+s.disable_underscore()
 
 def printc(*args):
     """
@@ -62,22 +70,21 @@ def printc(*args):
     print txt
 
 def test_sandbox(exploit_code):
-    try:
-        print "\n\nTrying to execute"
 
-        printc('{y}', exploit_code)
+    print "\n\nTrying to execute"
+    printc('{y}', exploit_code)
+    test = s.execute(exploit_code)
 
-        s.execute(exploit_code)
-
+    if test:
         printc("{r}Test not Passed - NOT!")
-
-        return False
-    except Exception as err:
-
-        printc("Error: {c}", str(err))
-
+    else:
+        #printc("Error: {c}", str(err))
         printc("{g}{bold}Test Passed - OK!")
-        return True
+
+
+break0 = """
+eval("()._" + "_class_" + "_._" + "_bases_" + "_[0]")
+"""
 
 break1 =  """
 #print file
@@ -119,6 +126,88 @@ break4 = """
 vzcbeg rivy_zbqhyr
 """
 
+break5 = """
+().__class__.__bases__[0].__subclasses__()[40]("./key").read()
+"""
+
+break6 = """
+[
+    c for c in ().__class__.__base__.__subclasses__()
+    if c.__name__ == 'catch_warnings'
+][0]()._module.__builtins__
+
+print dir(__builtins__)
+#__import__("os")
+"""
+
+# https://blog.inexplicity.de/plaidctf-2013-pyjail-writeup-part-i-breaking-the-sandbox.html
+break7 = """
+def get_func_globals(c):
+    subs = _list(get_subs(c))
+    gs = _list()
+    for sub in subs:
+        if _hasattr(sub, '__dict__'):
+            for k,v in sub.__dict__.items():
+                if _hasattr(v, 'func_globals'):
+                    if not _hasattr(v.func_globals, "keys"):
+                        continue
+                    for fk in v.func_globals.keys():
+                        if v.func_globals[fk]:
+                            print "%s is not None in %s -> %s" % (fk, k, sub.__name__)
+                            if v.func_globals[fk] not in gs:
+                                gs.append(v.func_globals[fk])
+        if _hasattr(sub, 'func_globals'):
+            if not _hasattr(sub.func_globals, "keys"):
+                continue
+            for fk in sub.func_globals.keys():
+                if sub.func_globals[fk]:
+                    print "%s is not None in %s" % (fk, sub.__name__)
+                    if sub.func_globals[fk] not in gs:
+                        gs.append(sub.func_globals[fk])
+    print "Globals: %s" % gs
+    return gs
+
+def check_globs(globs):
+    ret = _list()
+    for glob in globs:
+        if not _hasattr(glob, '__dict__'):
+            continue
+        for k,v in glob.__dict__.items():
+            if k in ['__doc__']:
+                continue
+            if "os" in _str(v):
+                print "%s: %s -> %s" %(glob, k,v)
+            ret.append(v)
+    return ret
+
+"""
+
+# http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
+break_segmentatation_fault = """
+(lambda fc=(
+    lambda n: [
+        c for c in
+            ().__class__.__bases__[0].__subclasses__()
+            if c.__name__ == n
+        ][0]
+    ):
+    fc("function")(
+        fc("code")(
+            0,0,0,0,"KABOOM",(),(),(),"","",0,""
+        ),{}
+    )()
+)()
+"""
+
+break_segmentation_fault2 = """
+(lambda fc=(lambda n: [c for c in ().__class__.__bases__[0].__subclasses__() if c.__name__ == n][0]):
+    fc("function")(fc("code")(0,0,0,0,"KABOOM",(),(),(),"","",0,""),{})()
+)()
+"""
+
+printc('\n{by}Test0')
+test_sandbox(break0)
+
 printc('\n{by}Test1')
 test_sandbox(break1)
 
@@ -131,4 +220,17 @@ test_sandbox(break3)
 printc('\n{by}Test4')
 test_sandbox(break4)
 
+printc('\n{by}Test5')
+test_sandbox(break5)
 
+printc('\n{by}Test6')
+test_sandbox(break6)
+
+
+
+printc('\n{by}Test break_segmentatation_fault')
+test_sandbox(break_segmentatation_fault)
+
+
+printc('\n{by}Test break_segmentatation_fault2')
+test_sandbox(break_segmentation_fault2)

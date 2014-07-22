@@ -20,22 +20,16 @@ class SandBox:
         for k, v in objects.iteritems():
             _namespace_[k] = v
 
-        self.sandbox =dict(_namespace_, __builtins__=None)
-
-
-
-        #self.sandbox['()'] = None
-        #self.sandbox['__subclasses__'] = None
-        self.cache = {}
-
-        #print self.sandbox
+        self.__sandbox__  =  dict(_namespace_, __builtins__=None)
+        self.__sandbox0__ = self.__sandbox__.copy()
+        #print self.__sandbox__
 
     def eval(self, code):
         #import StringIO
         #fp = StringIO.StringIO()
         bytecode = compile(code,'<stdin>', 'exec')
         try:
-            output = eval(bytecode, self.sandbox, self.cache)
+            output = eval(bytecode, self.__sandbox__)
             #output=  eval(bytecode)
             print output
             #return output
@@ -45,26 +39,19 @@ class SandBox:
             #return err
 
     def execute(self, code):
-        # import re
-        # variables = re.findall('\s*(.*)\s*=\s*', code)
-        # print "variables = %s" % variables
-
-        #bytecode = compile(code,'<string>', 'exec')
         bytecode = compile(code,'<string>', 'exec')
+        try:
+            exec(bytecode, self.__sandbox__)
+            return True
+        except Exception as err:
+            print err
+            return False
 
-        exec(bytecode, self.sandbox)
+    def executefile(self, filename):
+        source = open(filename, 'r').read()
+        return self.execute(source)
 
-import os
-import sys
-import pprint
-
-modules=["random", "math", "numpy"]
-builtins_allowed = ["range", "xrange", "dict"]
-objects = {'listdir': os.listdir, 'platform': sys.platform, 'pprint':pprint.pprint}
-s = SandBox(modules=modules, builtins_allowed=builtins_allowed, objects=objects)
-
-
-#
-# print [random.random() for r in range(10)]
+    def reset(self):
+        self.__sandbox__ = self.__sandbox0__.copy()
 
 

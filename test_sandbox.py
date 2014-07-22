@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-#
+#REFERENCES
 #   http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
-#
-#
+#   http://bot24.blogspot.com.br/2013/03/escaping-python-sandbox-ndh-2013-quals.html
+#   http://blog.delroth.net/2013/03/escaping-a-python-sandbox-ndh-2013-quals-writeup/
 #
 
 import os
@@ -12,14 +12,15 @@ import sys
 import pprint
 
 from sandbox import SandBox
-modules=["random", "math", "numpy"]
+modules = ["random", "math", "numpy"]
 #builtins_allowed = ["range", "xrange"]
 objects = {'listdir': os.listdir, 'platform': sys.platform, 'pprint':pprint.pprint, 'dict': dict,
            'chr':chr, 'ord':ord, 'dir':dir}
 #s = SandBox(modules=modules, builtins_allowed=builtins_allowed, objects=objects)
 
 s = SandBox(modules=modules, builtins_allowed=[], objects=objects)
-s.disable_underscore()
+#s.disable_underscore()
+s.set_verbose()
 
 def printc(*args):
     """
@@ -77,9 +78,11 @@ def test_sandbox(exploit_code):
 
     if test:
         printc("{r}Test not Passed - NOT!")
+        return False
     else:
         #printc("Error: {c}", str(err))
         printc("{g}{bold}Test Passed - OK!")
+        return True
 
 
 break0 = """
@@ -142,44 +145,98 @@ print dir(__builtins__)
 
 # https://blog.inexplicity.de/plaidctf-2013-pyjail-writeup-part-i-breaking-the-sandbox.html
 break7 = """
-def get_func_globals(c):
-    subs = _list(get_subs(c))
-    gs = _list()
-    for sub in subs:
-        if _hasattr(sub, '__dict__'):
-            for k,v in sub.__dict__.items():
-                if _hasattr(v, 'func_globals'):
-                    if not _hasattr(v.func_globals, "keys"):
-                        continue
-                    for fk in v.func_globals.keys():
-                        if v.func_globals[fk]:
-                            print "%s is not None in %s -> %s" % (fk, k, sub.__name__)
-                            if v.func_globals[fk] not in gs:
-                                gs.append(v.func_globals[fk])
-        if _hasattr(sub, 'func_globals'):
-            if not _hasattr(sub.func_globals, "keys"):
-                continue
-            for fk in sub.func_globals.keys():
-                if sub.func_globals[fk]:
-                    print "%s is not None in %s" % (fk, sub.__name__)
-                    if sub.func_globals[fk] not in gs:
-                        gs.append(sub.func_globals[fk])
-    print "Globals: %s" % gs
-    return gs
+#http://www.vnsecurity.net/2012/10/writeup-hacklu-2012-13/
 
-def check_globs(globs):
-    ret = _list()
-    for glob in globs:
-        if not _hasattr(glob, '__dict__'):
-            continue
-        for k,v in glob.__dict__.items():
-            if k in ['__doc__']:
-                continue
-            if "os" in _str(v):
-                print "%s: %s -> %s" %(glob, k,v)
-            ret.append(v)
-    return ret
+def makenumsmall(d):
+	gadget = "(''=='')"
+	rs = gadget
 
+	if (d==0): return rs+"-"+rs
+	if (d==1): return rs+"*"+rs
+
+	for i in range(1,d): rs += "+(''=='')"
+	return rs
+
+def makenum(d):
+	if (d<5): return makenumsmall(d)
+	a = bin(d)[2:]
+	index = len(a) - 1
+	s = ""
+	for c in a:
+		if c == '1':
+			s+= "("+makenumsmall(1)+"<<"+makenumsmall(index)+")+"
+		index-=1
+	return s[0:-1]
+
+def makechar(line):
+	return "('%'+`'"+chr(0xcc)+"'`["+str(makenum(3))+"])["+str(makenum(0))+":"+str(makenum(4))+"]%(" + makenum(line) + ")"
+
+gd = {}
+
+gd['x'] = "`'"+chr(0xcc)+"'`["+makenum(2)+"]"
+gd['a'] = "`'"+chr(0xaa)+"'`["+makenum(3)+"]"
+gd['b'] = "`'"+chr(0xbb)+"'`["+makenum(3)+"]"
+gd['c'] = "`'"+chr(0xcc)+"'`["+makenum(3)+"]"
+gd['d'] = "`'"+chr(0xdd)+"'`["+makenum(3)+"]"
+gd['e'] = "`'"+chr(0xee)+"'`["+makenum(3)+"]"
+gd['f'] = "`'"+chr(0xff)+"'`["+makenum(3)+"]"
+
+a = "+execfile('key')+"
+solo = [ord(i) for i in a]
+#print solo
+_sum = ''
+import re
+for line in solo:
+	if chr(line) in gd:
+		_gad = gd[chr(line)]
+	elif chr(line) == "'":
+		_gad = "'\\''"
+	elif re.match("\W",chr(line)):
+		_gad = "'"+chr(line)+"'"
+	else:
+		_gad = makechar(line)
+	_sum += "+" + _gad
+
+_sum = _sum[1:]
+print _sum
+print len(_sum)
+
+print eval(eval(_sum))
+print "1\n1\n"+_sum
+
+"""
+
+break8 = """
+auth(''.__class__.__class__('haxx2',(),{'__getitem__':
+lambda self,*a:'','__len__':(lambda l:l('function')( l('code')(
+1,1,6,67,'d\x01\x00i\x00\x00i\x00\x00d\x02\x00d\x08\x00h\x02\x00'
+'d\x03\x00\x84\x00\x00d\x04\x006d\x05\x00\x84\x00\x00d\x06\x006\x83'
+'\x03\x00\x83\x00\x00\x04i\x01\x00\x02i\x02\x00\x83\x00\x00\x01z\n'
+'\x00d\x07\x00\x82\x01\x00Wd\x00\x00QXd\x00\x00S',(None,'','haxx',
+l('code')(1,1,1,83,'d\x00\x00S',(None,),('None',),('self',),'stdin',
+'enter-lam',1,''),'__enter__',l('code')(1,2,3,87,'d\x00\x00\x84\x00'
+'\x00d\x01\x00\x84\x00\x00\x83\x01\x00|\x01\x00d\x02\x00\x19i\x00'
+'\x00i\x01\x00i\x01\x00i\x02\x00\x83\x01\x00S',(l('code')(1,1,14,83,
+'|\x00\x00d\x00\x00\x83\x01\x00|\x00\x00d\x01\x00\x83\x01\x00d\x02'
+'\x00d\x02\x00d\x02\x00d\x03\x00d\x04\x00d\n\x00d\x0b\x00d\x0c\x00d'
+'\x06\x00d\x07\x00d\x02\x00d\x08\x00\x83\x0c\x00h\x00\x00\x83\x02'
+'\x00S',('function','code',1,67,'|\x00\x00GHd\x00\x00S','s','stdin',
+'f','',None,(None,),(),('s',)),('None',),('l',),'stdin','exit2-lam',
+1,''),l('code')(1,3,4,83,'g\x00\x00\x04}\x01\x00d\x01\x00i\x00\x00i'
+'\x01\x00d\x00\x00\x19i\x02\x00\x83\x00\x00D]!\x00}\x02\x00|\x02'
+'\x00i\x03\x00|\x00\x00j\x02\x00o\x0b\x00\x01|\x01\x00|\x02\x00\x12'
+'q\x1b\x00\x01q\x1b\x00~\x01\x00d\x00\x00\x19S',(0, ()),('__class__',
+'__bases__','__subclasses__','__name__'),('n','_[1]','x'),'stdin',
+'locator',1,''),2),('tb_frame','f_back','f_globals'),('self','a'),
+'stdin','exit-lam',1,''),'__exit__',42,()),('__class__','__exit__',
+'__enter__'),('self',),'stdin','f',1,''),{}))(lambda n:[x for x in
+().__class__.__bases__[0].__subclasses__() if x.__name__ == n][0])})())
+
+"""
+
+break9 = """
+__builtins__=([x for x in (1).__class__.__base__.__subclasses__() if x.__name__ == 'catch_warnings'][0]()._module.__builtins__)
+import sys; print open(sys.argv[0]).read()
 """
 
 # http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
@@ -205,6 +262,7 @@ break_segmentation_fault2 = """
 )()
 """
 
+
 printc('\n{by}Test0')
 test_sandbox(break0)
 
@@ -226,11 +284,19 @@ test_sandbox(break5)
 printc('\n{by}Test6')
 test_sandbox(break6)
 
+printc('\n{by}Test7')
+test_sandbox(break7)
+
+printc('\n{by}Test8')
+test_sandbox(break8)
+
+printc('\n{by}Test9')
+test_sandbox(break9)
 
 
 printc('\n{by}Test break_segmentatation_fault')
 test_sandbox(break_segmentatation_fault)
-
-
+#
+#
 printc('\n{by}Test break_segmentatation_fault2')
 test_sandbox(break_segmentation_fault2)

@@ -8,7 +8,10 @@ Python environment to run user source given code safely
 class SandBox:
 
     def __init__(self, modules=[], builtins_allowed=[], objects={}):
+
         self.double_underscore = True
+        self.verbose = False
+
         _namespace_ = {}
 
         for module in modules:
@@ -54,6 +57,11 @@ class SandBox:
         """
         self.double_underscore = False
 
+    def set_verbose(self):
+        self.verbose = True
+
+    def set_silent(self):
+        self.verbose = False
 
     def execute(self, code):
         import re
@@ -63,7 +71,13 @@ class SandBox:
         else:
             _code = code
 
-        print "_code = %s\n" % _code
+        blacklist = ["__builtins__", "__subclasses__", "__class__", "__name__", "__subclasses__", "__bases__"]
+        for word in blacklist:
+            _code = re.sub(word, '', _code)
+
+        if self.verbose:
+            print "_code = %s\n" % _code
+
 
         try:
             bytecode = compile(_code,'<string>', 'exec')

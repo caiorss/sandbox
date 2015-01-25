@@ -21,7 +21,7 @@ class SandBox:
         for a in builtins_allowed:
             _namespace_[a] = getattr(__builtins__, a)
 
-        for k, v in objects.iteritems():
+        for k, v in objects.items():
             _namespace_[k] = v
 
         self.__sandbox__  =  dict(_namespace_, __builtins__=None)
@@ -35,11 +35,11 @@ class SandBox:
         try:
             output = eval(bytecode, self.__sandbox__)
             #output=  eval(bytecode)
-            print output
+            print(output)
             #return output
 
         except Exception as err:
-            print "Error :", err
+            print("Error :", err)
             #return err
 
     def enable_underscore(self):
@@ -76,7 +76,7 @@ class SandBox:
             _code = re.sub(word, '', _code)
 
         if self.verbose:
-            print "_code = %s\n" % _code
+            print("_code = %s\n" % _code)
 
 
         try:
@@ -84,7 +84,7 @@ class SandBox:
             exec(bytecode, self.__sandbox__)
             return True
         except Exception as err:
-            print err
+            print(err)
             return False
 
     def executefile(self, filename):

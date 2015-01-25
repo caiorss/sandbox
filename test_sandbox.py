@@ -69,11 +69,11 @@ def printc(*args):
     txt = re.sub(r'{bold}', r"\033[1m", txt)    # Bold
     txt = re.sub(r'{line}', r"\033[4m", txt)    # Bold
 
-    print txt
+    print(txt)
 
 def test_sandbox(exploit_code):
 
-    print "\n\nTrying to execute"
+    print("\n\nTrying to execute")
     printc('{y}', exploit_code)
     test = s.execute(exploit_code)
 
@@ -272,18 +272,18 @@ for idx, code  in  enumerate(codes):
     printc('\n{by}Test%s' % idx)
     results.append(test_sandbox(code))
 
-print "\n---------- summary ----------------\n\n"
+print("\n---------- summary ----------------\n\n")
 total = len(results)
 score = 0.0
 
 for idx, r in enumerate(results):
     if r:
-        print "Test %s OK" % idx
+        print("Test %s OK" % idx)
         score+=1
     else:
-        print "Test %s Failed" % idx
+        print("Test %s Failed" % idx)
 
-print "\n\nSCORE %s%%" % (100*total/score)
+print("\n\nSCORE %s%%" % (100*total/score))
 
 
 
